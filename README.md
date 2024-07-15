@@ -67,10 +67,10 @@ Pretained checkpoints are available at:
 
 |      Model Name     | Pretrain Data | Finetuned Data | Batch Size | Lambda_c |   Masking Ratio  |  FPS  |  Duration (s)  |
 |:-------------------:|:-------------:|:-------------:|:----------:|:--------:|:----------------:|:-----:|:----------:|
-|   **[Social-MAE](not_available_yet)** <br /> | VoxCeleb2 | n.a. |     36    |   0.01   | 75% Unstructured | 2 | 4 |
-|   **[Social-MAE-FT](not_available_yet)** <br /> | VoxCeleb2 | CREMA-D |     12    |   0.01   | 75% Unstructured | 2 | 4 |
-|   **[Social-MAE-FT](not_available_yet)** <br /> | VoxCeleb2 | ChaLearn FI |     8    |   0.01   | 75% Unstructured | 2 | 4 |
-|   **[Social-MAE-FT](not_available_yet)** <br /> | VoxCeleb2 | NDC-ME |     8    |   0.01   | 75% Unstructured | 2 | 4 |
+|   **[Social-MAE](https://drive.google.com/file/d/1s2giy3_tQKL_cISiYcN5lBy_ami6Dc0n/view?usp=drive_link)** <br /> | VoxCeleb2 | n.a. |     36    |   0.01   | 75% Unstructured | 2 | 4 |
+|   **[Social-MAE-FT](https://drive.google.com/file/d/1WrqznBLZ0G8HRe6POt9E4w9zVNzbfWA_/view?usp=drive_link)** <br /> | VoxCeleb2 | CREMA-D |     12    |   0.01   | 75% Unstructured | 2 | 4 |
+|   **[Social-MAE-FT](https://drive.google.com/file/d/1t8rvCVLvoLoQG85N7LToHZPF6vy9HQB2/view?usp=drive_link)** <br /> | VoxCeleb2 | ChaLearn FI |     8    |   0.01   | 75% Unstructured | 2 | 4 |
+|   **[Social-MAE-FT](https://drive.google.com/file/d/1bjzz1oOF0vdvQ8fV3y5CU-Zxne1UeHpz/view?usp=drive_link)** <br /> | VoxCeleb2 | NDC-ME |     8    |   0.01   | 75% Unstructured | 2 | 4 |
 
 ## Contact
 If you have a question, please bring up an issue (preferred) or send me an email [hugo.bohy@umons.ac.be](hugo.bohy@umons.ac.be).
