@@ -3,15 +3,20 @@
 ## Introduction
 <p align="center"><img src="SocialMAE.png" alt="Illustration of Social-MAE." width="900"/></p>
 
-This repository contains the implementation of Social-MAE proposed in our [FG 2024 paper](not_available_yet).
+This repository contains the implementation of Social-MAE proposed in our [FG 2024 paper](https://arxiv.org/abs/2508.17502).
 
 Social-MAE is a pre-trained audiovisual Masked Autoencoder based on an extended version of Contrastive Audio-Visual Masked Auto-Encoder (CAV-MAE), which is pre-trained on audiovisual social data. Specifically, we modify CAV-MAE to receive a larger number of frames as input and pre-train it on a large dataset of human social interaction (VoxCeleb2) in a self-supervised manner. The model achieves state-of-the-art results on multimodal emotion recognition and laughter recognition and competitive results for apparent personality estimation.
 
 ## Citing
 Please cite the following paper.
 ```  
-@inproceedings{
-    in-press
+@inproceedings{bohy2024social,
+  title={Social-mae: A transformer-based multimodal autoencoder for face and voice},
+  author={Bohy, Hugo and Tran, Minh and El Haddad, Kevin and Dutoit, Thierry and Soleymani, Mohammad},
+  booktitle={2024 IEEE 18th International Conference on Automatic Face and Gesture Recognition (FG)},
+  pages={1--5},
+  year={2024},
+  organization={IEEE}
 }
 ```
 
