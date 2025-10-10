@@ -52,18 +52,18 @@ class MyDataset(Dataset):
         self.target_fps = target_fps
         self.target_duration = target_duration
 
-        self.ids = [os.path.basename(folder) for folder in glob(os.path.join(self.dirpath['video'], self.partition, '**'))]
+        self.ids = [os.path.basename(folder) for folder in glob(os.path.join(self.dirpath['video'], '**'))]
 
         self.vids = []
         self.wavs = []
         self.labels = []
         for id in self.ids:
-            urls = [os.path.basename(dir) for dir in glob(os.path.join(self.dirpath['video'], self.partition, id, '**'))]
+            urls = [os.path.basename(dir) for dir in glob(os.path.join(self.dirpath['video'], id, '**'))]
             for url in urls:
-                filenames = [os.path.splitext(os.path.basename(dir))[0] for dir in glob(os.path.join(self.dirpath['video'], self.partition, id, url, '*'))]
+                filenames = [os.path.splitext(os.path.basename(dir))[0] for dir in glob(os.path.join(self.dirpath['video'], id, url, '*'))]
                 for filename in filenames:
-                    self.vids.append(os.path.join(self.dirpath['video'], self.partition, id, url, filename+'.mp4'))
-                    self.wavs.append(os.path.join(self.dirpath['audio'], self.partition, id, url, filename+'.wav'))
+                    self.vids.append(os.path.join(self.dirpath['video'], id, url, filename+'.mp4'))
+                    self.wavs.append(os.path.join(self.dirpath['audio'], id, url, filename+'.wav'))
                     self.labels.append(id)
         if not len(self.wavs) == len(self.vids):
             raise ValueError(f'Video and audio sizes are not matching up.')

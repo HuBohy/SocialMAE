@@ -1,0 +1,1 @@
+from src.models.social_mae import SocialMAEFT, SocialMAE

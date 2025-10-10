@@ -9,7 +9,8 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
 
-from dataloader import MyDataset
+from data.dataloader import MyDataset
+from data.ndcme import NDCME 
 from models.social_mae import SocialMAEFT
 from sklearn.metrics import mean_absolute_error, confusion_matrix, balanced_accuracy_score
 
@@ -172,7 +173,8 @@ if __name__ == '__main__':
         with open(f'{exp_dir}/hparams.json', 'wt') as f:
             json.dump(vars(args), f, indent=4)
 
-    sets = [MyDataset(args.data_video,  args.data_audio, partition=partition) for partition in ['train', 'val', 'test']]
+    # sets = [MyDataset(args.data_video,  args.data_audio, partition=partition) for partition in ['train', 'val', 'test']]
+    sets = [NDCME(args.data_video,  args=args, mode=partition, partition=[0.7, 0.15, 0.15]) for partition in ['train', 'val', 'test']]
     loaders = [DataLoader(ds, batch_size=args.batch_size, num_workers=args.num_workers) for ds in sets]
     model = SocialMAEFT(label_dim=args.n_class, n_frame=int(args.fps * args.duration))
 
@@ -231,8 +233,9 @@ if __name__ == '__main__':
                     print(f"Saving checkpoint and optimizer in {exp_dir}")
             scheduler.step()
 
-    best_weight = torch.load("%s/best_social_model.pth" % (exp_dir), map_location=args.device)
-    miss, unexpected = best_model.load_state_dict(best_weight, strict=False)
+        best_weight = torch.load("%s/best_social_model.pth" % (exp_dir), map_location=args.device)
+        miss, unexpected = best_model.load_state_dict(best_weight, strict=False)
+
     if args.verbose:
         print(f"Missed parameters: {miss}\nUnexpected parameters: {unexpected}")
         print(f"Model succesfully loaded on {args.device} from {exp_dir}.")

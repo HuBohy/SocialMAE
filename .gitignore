@@ -1,2 +1,15 @@
+logs/
+
+# Byte-compiled / optimized / DLL files
+*.py[cod]
+*.zip
+
+# Model files
+*.pth
+
 .DS_STORE
-**/__pycache__
+*.pyc
+*.pyo
+*.pyd
+__pycache__/
+.ipynb_checkpoints/

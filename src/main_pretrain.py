@@ -11,7 +11,7 @@ import torch.nn as nn
 from torch.utils.data import DataLoader, random_split
 from torch.cuda.amp import autocast, GradScaler
 
-from dataloader import MyDataset
+from data.dataloader import MyDataset
 from models.social_mae import SocialMAE
 from utilities.util import AverageMeter
 
@@ -211,7 +211,7 @@ def train(
 
         finish_time = time.time()
         if args.verbose:
-           print(f'[Epoch {epoch}] lr: {optimizer.param_groups[0]['lr']}; training time: {finish_time-begin_time:.3f}')
+           print(f'[Epoch {epoch}] lr: {optimizer.param_groups[0]["lr"]}; training time: {finish_time-begin_time:.3f}')
 
         epoch += 1
 
