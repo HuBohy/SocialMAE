@@ -239,5 +239,83 @@ if __name__ == '__main__':
     if args.verbose:
         print(f"Missed parameters: {miss}\nUnexpected parameters: {unexpected}")
         print(f"Model succesfully loaded on {args.device} from {exp_dir}.")
-    acc, loss, model = validate(best_model, loaders[2], criterion, args)
-    print('Final Accuracy: {}, Loss: {:.4f}'.format(acc, loss))
+    # acc, loss, model = validate(best_model, loaders[2], criterion, args)
+    # print('Final Accuracy: {}, Loss: {:.4f}'.format(acc, loss))
+    
+    
+    from sklearn.manifold import TSNE
+    import matplotlib.pyplot as plt
+
+    def extract_latents(model, dataloader, args):
+        model.eval()
+        latents = []
+        labels = []
+        sublabels = []
+        with torch.no_grad():
+            for data_v, data_a, target, sublabel in tqdm(dataloader):
+                data_v = data_v.float().to(args.device)
+                data_a = data_a.float().to(args.device)
+                # Assuming model returns latent features as a second output
+                # If not, you may need to modify your model to return them
+                if hasattr(model.module, 'extract_latent'):
+                    latent = model.module.extract_latent(data_a, data_v, mode=args.mode)
+                else:
+                    latent = model.module.forward_features(data_a, data_v, mode=args.mode)
+                latents.append(latent.cpu().numpy())
+                labels.extend(int(t) for t in target)
+                sublabels.extend(str(s) for s in sublabel)
+        latents = np.concatenate(latents, axis=0)
+        labels = np.array(labels)
+        sublabels = np.array(sublabels)
+        return latents, labels, sublabels
+
+    # --- t-SNE visualization mutlimodal ---
+    latents, labels, sublabels = extract_latents(best_model, loaders[2], args)
+    tsne = TSNE(n_components=2, random_state=42)
+
+    latents_2d = tsne.fit_transform(latents)
+    plt.figure(figsize=(8,6))
+    scatter = plt.scatter(latents_2d[:,0], latents_2d[:,1], c=labels, cmap='tab10', alpha=0.7)
+    for i, txt in enumerate(sublabels):
+        plt.annotate(txt, (latents_2d[i,0], latents_2d[i,1]), fontsize=7, alpha=0.5)
+    # plt.legend(scatter, label='Class')
+    plt.title(f'2D t-SNE of Latent Space: {args.mode}')
+    plt.xlabel('t-SNE 1')
+    plt.ylabel('t-SNE 2')
+    plt.tight_layout()
+    plt.show()
+
+
+    # --- t-SNE visualization audioonly ---
+    setattr(args, "mode", "audioonly")
+    latents, labels, sublabels = extract_latents(best_model, loaders[2], args)
+    tsne = TSNE(n_components=2, random_state=42)
+
+    latents_2d = tsne.fit_transform(latents)
+    plt.figure(figsize=(8,6))
+    scatter = plt.scatter(latents_2d[:,0], latents_2d[:,1], c=labels, cmap='tab10', alpha=0.7)
+    for i, txt in enumerate(sublabels):
+        plt.annotate(txt, (latents_2d[i,0], latents_2d[i,1]), fontsize=7, alpha=0.5)
+    # plt.legend(scatter, label='Class')
+    plt.title(f'2D t-SNE of Latent Space: {args.mode}')
+    plt.xlabel('t-SNE 1')
+    plt.ylabel('t-SNE 2')
+    plt.tight_layout()
+    plt.show()
+
+    # --- t-SNE visualization videoonly ---
+    setattr(args, "mode", "videoonly")
+    latents, labels, sublabels = extract_latents(best_model, loaders[2], args)
+    tsne = TSNE(n_components=2, random_state=42)
+
+    latents_2d = tsne.fit_transform(latents)
+    plt.figure(figsize=(8,6))
+    scatter = plt.scatter(latents_2d[:,0], latents_2d[:,1], c=labels, cmap='tab10', alpha=0.7)
+    for i, txt in enumerate(sublabels):
+        plt.annotate(txt, (latents_2d[i,0], latents_2d[i,1]), fontsize=7, alpha=0.5)
+    # plt.legend(scatter, label='Class')
+    plt.title(f'2D t-SNE of Latent Space: {args.mode}')
+    plt.xlabel('t-SNE 1')
+    plt.ylabel('t-SNE 2')
+    plt.tight_layout()
+    plt.show()

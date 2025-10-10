@@ -170,9 +170,13 @@ class SocialMAE(nn.Module):
         x: (N, L, patch_size**2 *3)
         """
         if t is None:
+            print(imgs.shape)
             x = imgs.reshape(shape=(imgs.shape[0], c, h, p, w, p))
+            print(x.shape)
             x = torch.einsum('nchpwq->nhwpqc', x)
+            print(x.shape)
             x = x.reshape(shape=(imgs.shape[0], h * w, p **2 * c))
+            print(x.shape)
             return x
         else:
             x = imgs.reshape(shape=(imgs.shape[0], c, h, p, w, p, t, s))
@@ -450,3 +454,60 @@ class SocialMAEFT(nn.Module):
             x = v.mean(dim=1)
             x = self.mlp_head(x)
             return x
+        
+    def forward_features(self, a, v, mode='multimodal'):
+        if mode == 'multimodal':
+            a = a.unsqueeze(1)
+            a = a.transpose(2, 3)
+            a = self.patch_embed_a(a)
+            a = a + self.pos_embed_a
+            a = a + self.modality_a
+
+            v = self.patch_embed_v(v)
+            v = v + self.pos_embed_v
+            v = v + self.modality_v
+
+            for blk in self.blocks_a:
+                a = blk(a)
+
+            for blk in self.blocks_v:
+                v = blk(v)
+
+            x = torch.cat((a, v), dim=1)
+
+            for blk in self.blocks_u:
+                x = blk(x)
+            x = self.norm(x)
+
+            x = x.mean(dim=1)
+            return x
+
+        elif mode == 'audioonly':
+            a = a.unsqueeze(1)
+            a = a.transpose(2, 3)
+            a = self.patch_embed_a(a)
+            a = a + self.pos_embed_a
+            a = a + self.modality_a
+
+            for blk in self.blocks_a:
+                a = blk(a)
+
+            for blk in self.blocks_u:
+                a = blk(a, 'a')
+            a = self.norm_a(a)
+            x = a.mean(dim=1)
+            return x
+
+        elif mode == 'videoonly':
+            v = self.patch_embed_v(v)
+            v = v + self.pos_embed_v
+            v = v + self.modality_v
+
+            for blk in self.blocks_v:
+                v = blk(v)
+
+            for blk in self.blocks_u:
+                v = blk(v, 'v')
+            v = self.norm_v(v)
+            x = v.mean(dim=1)
+        return x
