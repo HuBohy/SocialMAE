@@ -30,14 +30,14 @@ class GUI:
         self.audio_thread = None
 
         self.video_buffer_size = 8  # Number of frames for SocialMAE
-        self.video_fps = 30  # Assuming 30 FPS for webcam/video
+        self.video_fps = 25  # Assuming 25 FPS for webcam/video
         self.audio_rate = 16000
-        self.audio_duration = 4  # seconds
+        self.processing_duration = 0.27  # seconds
 
         # Emotion labels
         self.task = {
             "lsn": {"model_path": "socialMAE_ndcme.pth", "labels": ["Laughs", "Smiles", "Neutral"]},
-            "emotions": {"model_path": "socialMAE_cremad.pth", "labels": ["Angry", "Disgust", "Fear", "Happy", "Neutral", "Sad"]}
+            "emotions": {"model_path": "socialMAE_cremad_mm.pth", "labels": ["Angry", "Disgust", "Fear", "Happy", "Neutral", "Sad"]}
         }
         self.emotion_labels = self.task[current_task]["labels"]
         self.model_path = self.task[current_task]["model_path"]
@@ -98,13 +98,13 @@ class GUI:
         mode_frame.grid(row=3, column=0, columnspan=4, pady=10, sticky=(tk.W, tk.E))
         
         self.mode_var = tk.StringVar(value=self.input_mode)
-        webcam_radio = ttk.Radiobutton(mode_frame, text="Webcam + Mic", variable=self.mode_var, 
-                                      value="webcam", command=self.on_mode_change)
-        webcam_radio.grid(row=0, column=0, padx=10)
+        # webcam_radio = ttk.Radiobutton(mode_frame, text="Webcam + Mic", variable=self.mode_var, 
+        #                               value="webcam", command=self.on_mode_change)
+        # webcam_radio.grid(row=0, column=0, padx=10)
         
-        video_radio = ttk.Radiobutton(mode_frame, text="Random Video", variable=self.mode_var, 
-                                     value="video", command=self.on_mode_change)
-        video_radio.grid(row=0, column=1, padx=10)
+        # video_radio = ttk.Radiobutton(mode_frame, text="Random Video", variable=self.mode_var, 
+        #                              value="video", command=self.on_mode_change)
+        # video_radio.grid(row=0, column=1, padx=10)
         
         # Video info label
         self.video_info_label = ttk.Label(mode_frame, text="", font=("Arial", 9))
@@ -143,13 +143,9 @@ class GUI:
 
     def on_mode_change(self):
         """Handle input mode change"""
-        logger.debug(f"Input mode changed to: {self.mode_var.get()}")
         self.input_mode = self.mode_var.get()
-        logger.debug("Restarting capture with new mode")
         self.stop_capture()
-        logger.debug("Capture stopped")
         self.start_capture()
-        logger.debug("Capture started")
         
         
     def start_capture(self):
@@ -157,13 +153,12 @@ class GUI:
         if not self.is_running:
             try:
                 # Setup video capture
-                self.video_thread = VideoThread(buffer_size=self.video_buffer_size, fps=self.video_fps, input_mode=self.input_mode)
-                self.video_thread.start_thread()
+                self.video_thread = VideoThread(buffer_size=self.video_buffer_size, fps=self.video_fps, processing_duration=self.processing_duration, input_mode=self.input_mode)
                 self.video_thread.start()
 
                 if self.input_mode == "webcam":
                     # Setup audio recording for webcam mode
-                    self.audio_thread = AudioThread(audio_rate=self.audio_rate, audio_duration=self.audio_duration)
+                    self.audio_thread = AudioThread(audio_rate=self.audio_rate, audio_duration=self.processing_duration)
                     self.audio_thread.start_thread()
                     self.audio_thread.start()
 
@@ -171,14 +166,11 @@ class GUI:
                 self.main_thread = threading.Thread(target=self.update_frame, daemon=True)
                 self.main_thread.start()
 
-                if self.input_mode == "video":
-                    video_name = self.video_thread.load_random_video()
-
                 self.start_button.config(state="disabled")
                 self.stop_button.config(state="normal")
                 self.status_label.config(text=f"Status: Running ({self.video_thread.input_mode})")
                 self.audio_status_label.config(text="Audio: Recording" if self.input_mode == "webcam" else "Audio: N/A")
-                self.video_info_label.config(text=f"Selected: {video_name}" if self.input_mode == "video" else "")
+                # self.video_info_label.config(text=f"Selected: {self.video_thread.current_video_path}" if self.input_mode == "video" else "")
                 
             except Exception as e:
                 messagebox.showerror("Error", f"Failed to start capture: {str(e)}")
@@ -189,9 +181,8 @@ class GUI:
             self.is_running = False
             
             # Stop video thread
-            if self.video_thread and self.video_thread.is_alive():
-                self.video_thread.stop_thread()
-                self.video_thread.join(timeout=1.0)
+            if self.video_thread:
+                self.video_thread.stop()
 
             # Stop audio recording
             self.audio_recording = False
@@ -213,26 +204,24 @@ class GUI:
     def update_frame(self):
         emotion_text = "Collecting frames..."
         while self.is_running:
-            if not self.video_thread.frame_buffer:
-                continue
             audio_tensor = next(self.audio_thread.get_audio_tensor()) if self.input_mode == "webcam" else None
+            # audio_tensor = None
             video_tensor = next(self.video_thread.get_video_tensor())
             if video_tensor is not None:
-                self.audio_status_label.config(text=f"Audio: Recording ({self.audio_thread.get_audio_duration():.2f}s, target: {self.audio_duration:.2f}s)" if audio_tensor is not None else "Audio: N/A")
+                self.audio_status_label.config(text=f"Audio: Recording ({self.processing_duration:.2f}s, target: {self.processing_duration:.2f}s)" if audio_tensor is not None else "Audio: N/A")
                 emotion, confidence = next(self.predict_emotion_from_frames(video_tensor, audio_tensor))
                 emotion_text = f"{emotion} ({confidence:.2f})"
                 if audio_tensor is not None:
                     emotion_text += " [A+V]"
                 else:
                     emotion_text += " [V]"
-            else:
-                emotion_text = f"Collecting frames... ({len(self.video_thread.frame_buffer)}/{self.video_thread.buffer_size})"
 
-            # Update prediction label   
-            self.video_thread.set_label_on_frame(emotion_text)
+            # Update prediction label
             self.prediction_label.config(text=f"Emotion: {emotion_text}")
-
+            self.video_info_label.config(text=f"Selected: {self.video_thread.current_video_path}" if self.input_mode == "video" else "")
+            self.video_thread.set_label_on_frame(emotion_text)
             frame_rgb = self.video_thread.display_frame()
+
             # Convert to PIL Image and then to PhotoImage
             pil_image = Image.fromarray(frame_rgb)
             photo = ImageTk.PhotoImage(image=pil_image)
@@ -242,7 +231,7 @@ class GUI:
             self.video_label.image = photo  # Keep a reference
 
             # Control frame rate
-            self.root.after(int(1000/self.video_thread.fps))  # ~30 FPS
+            self.root.after(int(1000/self.video_fps))  # ~30 FPS
 
     
     def predict_emotion_from_frames(self, frame_tensor, audio_tensor=None):
@@ -254,18 +243,16 @@ class GUI:
             with torch.no_grad():
                 # Use real audio if available, otherwise use dummy audio
                 if audio_tensor is None:
-                    audio_input = torch.zeros(1, 1024, 128).to(self.device)
-                else:
-                    audio_input = audio_tensor
-                
+                    audio_tensor = torch.zeros(1, 1024, 128).to(self.device)
+
                 # Choose mode based on available inputs
-                if audio_tensor is not None and self.input_mode == "webcam":
-                    mode = "multimodal"
-                else:
-                    mode = "videoonly"
+                # if audio_tensor is not None and self.input_mode == "webcam":
+                mode = "multimodal"
+                # else:
+                #     mode = "videoonly"
                 
                 # Run inference
-                output = self.model(audio_input, frame_tensor, mode=mode)
+                output = self.model(audio_tensor, frame_tensor, mode=mode)
                 probabilities = torch.nn.functional.softmax(output, dim=1)
                 confidence, predicted = torch.max(probabilities, 1)
                 
@@ -283,7 +270,7 @@ class GUI:
 
 def main():
     root = tk.Tk()
-    app = GUI(root)
+    app = GUI(root, current_task="lsn")
     
     # Handle window closing
     def on_closing():

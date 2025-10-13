@@ -23,6 +23,7 @@ class VideoProcessing:
         # Image preprocessing
         self.transform = transforms.Compose([
             transforms.ToPILImage(),
+            transforms.Resize((224, 224), interpolation=transforms.InterpolationMode.BICUBIC),
             transforms.CenterCrop((224, 224)),
             transforms.ToTensor(),
             transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
@@ -33,11 +34,16 @@ class VideoProcessing:
         self.input_mode = input_mode  # "webcam" or "video"
         self.buffer_size = buffer_size
         self.face_coords = None  # To store the coordinates of the detected face
+        self.has_processed = False  # Flag to indicate if frames have been processed
+        self.last_result = None  # Store last result to avoid reprocessing
 
     def detect_faces(self, frame):
         """Detect faces in the frame"""
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         faces = self.face_cascade.detectMultiScale(gray, 1.1, 4)
+
+        del gray  # Free memory
+
         return faces
     
     def preprocess_frames(self, frames):
@@ -46,47 +52,56 @@ class VideoProcessing:
             processed_frames = []
             for frame in frames:
                 # Convert BGR to RGB
-                frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                # frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                 
                 # Apply transforms
-                frame_tensor = self.transform(frame_rgb)
+                frame_tensor = self.transform(frame)
                 processed_frames.append(frame_tensor)
             
             # Stack frames: (8, 3, 224, 224) -> (1, 3, 224, 224, 8)
-            frame_stack = torch.stack(processed_frames, dim=-1)
+            frame_stack = torch.stack(processed_frames)
+            del processed_frames  # Free memory
+            frame_stack = torch.einsum('tchw->chwt', frame_stack)
             frame_stack = frame_stack.unsqueeze(0)  # Add batch dimension
             
             return frame_stack.to(self.device)
         except Exception as e:
             logger.error(f"Error preprocessing frames: {e}")
+            if 'processed_frames' in locals():
+                del processed_frames
             return None
 
     def process_frames(self, frames):
         """Get the processing with a new frame"""
-        if len(frames) < self.buffer_size:
-            return None  # Not enough frames yet
-        self.current_frame = frames[-1]
+        if not self.has_processed:
+            if self.input_mode == "webcam":
+                faces = self.detect_faces(frames[-1])
+                if len(faces) > 0:
+                    # Get the largest face
+                    largest_face = max(faces, key=lambda rect: rect[2] * rect[3])
+                    x, y, w, h = largest_face
+                    self.face_coords = (x, y, w, h)
+                    
+                    # Extract face regions from all 8 frames
+                    face_frames = []
+                    for buffered_frame in frames:
+                        # Use the same face coordinates for all frames
+                        face_img = buffered_frame[y:y+h, x:x+w]
+                        # Resize to 224x224 for consistency
+                        face_img = self.resize_transform(face_img)
+                        face_frames.append(face_img)
+                    # Preprocess and predict using all 8 frames
+                    frames = face_frames
+                    del face_frames  # Free memory
 
-        if self.input_mode == "webcam":
-            faces = self.detect_faces(self.current_frame)
-            if len(faces) > 0:
-                # Get the largest face
-                largest_face = max(faces, key=lambda rect: rect[2] * rect[3])
-                x, y, w, h = largest_face
-                self.face_coords = (x, y, w, h)
-                
-                # Extract face regions from all 8 frames
-                face_frames = []
-                for buffered_frame in frames:
-                    # Use the same face coordinates for all frames
-                    face_img = buffered_frame[y:y+h, x:x+w]
-                    # Resize to 224x224 for consistency
-                    face_img = self.resize_transform(face_img)
-                    face_frames.append(face_img)
-                # Preprocess and predict using all 8 frames
-                frames = face_frames
-        return self.preprocess_frames(frames)
-    
+            result = self.preprocess_frames(frames)
+            self.last_result = result
+            
+            self.has_processed = True  # Mark that frames have been processed
+        else:
+            result = self.last_result  # Use the last processed result
+        return result
+
     def set_label_on_frame(self, label):
         """Set the label on the current frame"""
         if self.face_coords:

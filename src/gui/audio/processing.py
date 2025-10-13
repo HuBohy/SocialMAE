@@ -22,8 +22,8 @@ class AudioProcessor:
         self.audio_chunks = audio_chunk  # Model expects 1024 time steps
         self.n_mels = n_mels  # Model expects 128 mel bands
 
-        self.norm_mean=-7.80455191
-        self.norm_std=8.83769718
+        self.norm_mean=-6.2943
+        self.norm_std=12.26344
         self.current_buffer_size = 0  # To track the size of the current audio buffer
     
     def get_audio_features(self, audio_buffer):
